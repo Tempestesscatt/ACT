@@ -1,49 +1,46 @@
 import streamlit as st
-import requests
-from PIL import Image
-from io import BytesIO
+import folium
+from streamlit_folium import st_folium
 
-st.set_page_config(page_title="Satélite Earth", layout="centered")
+st.set_page_config(page_title="Satèl·lit Earth", layout="wide")
 
-st.title("🌍 Imagen Satélite de la Tierra")
-st.caption("Imagen en tiempo real desde NASA Worldview (GIBS)")
+st.title("🛰️ Visualitzador de Satèl·lit")
+st.caption("Imatges de satèl·lit en temps real via Esri World Imagery")
 
-# Parámetros del mapa
-lat = st.number_input("Latitud", value=41.4, format="%.4f")
-lon = st.number_input("Longitud", value=2.17, format="%.4f")
-zoom = st.slider("Zoom (radio en grados)", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+col1, col2, col3 = st.columns(3)
+with col1:
+    lat = st.number_input("Latitud", value=41.4033, format="%.4f")
+with col2:
+    lon = st.number_input("Longitud", value=2.1734, format="%.4f")
+with col3:
+    zoom = st.slider("Zoom", min_value=1, max_value=18, value=10)
 
-# Calcular bounding box
-bbox = f"{lon - zoom},{lat - zoom},{lon + zoom},{lat + zoom}"
-
-# URL del servicio WMS de NASA GIBS (MODIS Terra, capa de color natural)
-url = (
-    "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi"
-    "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap"
-    "&LAYERS=MODIS_Terra_CorrectedReflectance_TrueColor"
-    f"&BBOX={bbox}"
-    "&WIDTH=800&HEIGHT=600"
-    "&SRS=EPSG:4326"
-    "&FORMAT=image/jpeg"
-    "&TIME=2024-01-01"
+# Mapa amb capa satèl·lit d'Esri
+m = folium.Map(
+    location=[lat, lon],
+    zoom_start=zoom,
+    tiles=None,
 )
 
-st.markdown("---")
+# Capa satèl·lit Esri (funciona sense API key)
+folium.TileLayer(
+    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attr="Esri World Imagery",
+    name="Satèl·lit",
+    overlay=False,
+    control=True,
+).add_to(m)
 
-if st.button("📡 Obtener imagen"):
-    with st.spinner("Descargando imagen del satélite..."):
-        try:
-            response = requests.get(url, timeout=15)
-            if response.status_code == 200 and "image" in response.headers.get("Content-Type", ""):
-                img = Image.open(BytesIO(response.content))
-                st.image(img, caption=f"Lat: {lat}, Lon: {lon} | Zoom: ±{zoom}°", use_container_width=True)
-                st.success("✅ Imagen cargada desde NASA GIBS (MODIS Terra)")
-            else:
-                st.error(f"Error al obtener imagen. Código HTTP: {response.status_code}")
-        except Exception as e:
-            st.error(f"Error de conexión: {e}")
+# Marcador a la posició
+folium.Marker(
+    [lat, lon],
+    popup=f"Lat: {lat:.4f}, Lon: {lon:.4f}",
+    icon=folium.Icon(color="red", icon="crosshairs", prefix="fa"),
+).add_to(m)
+
+st_folium(m, width="100%", height=600)
 
 st.markdown(
-    "<small style='color:gray'>Fuente: NASA GIBS · MODIS Terra True Color · EPSG:4326</small>",
+    "<small style='color:gray'>Font: Esri World Imagery · Dades de satèl·lit · Sense API key</small>",
     unsafe_allow_html=True,
 )
