@@ -1,11 +1,7 @@
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Satèl·lit Earth", layout="wide")
-
 st.title("🛰️ Visualitzador de Satèl·lit")
-st.caption("Imatges de satèl·lit en temps real via Esri World Imagery")
 
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -15,32 +11,36 @@ with col2:
 with col3:
     zoom = st.slider("Zoom", min_value=1, max_value=18, value=10)
 
-# Mapa amb capa satèl·lit d'Esri
-m = folium.Map(
-    location=[lat, lon],
-    zoom_start=zoom,
-    tiles=None,
-)
+html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body {{ margin: 0; padding: 0; }}
+    #map {{ width: 100%; height: 580px; }}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var map = L.map('map').setView([{lat}, {lon}], {zoom});
 
-# Capa satèl·lit Esri (funciona sense API key)
-folium.TileLayer(
-    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attr="Esri World Imagery",
-    name="Satèl·lit",
-    overlay=False,
-    control=True,
-).add_to(m)
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}',
+      {{ attribution: 'Esri World Imagery', maxZoom: 18 }}
+    ).addTo(map);
 
-# Marcador a la posició
-folium.Marker(
-    [lat, lon],
-    popup=f"Lat: {lat:.4f}, Lon: {lon:.4f}",
-    icon=folium.Icon(color="red", icon="crosshairs", prefix="fa"),
-).add_to(m)
+    L.marker([{lat}, {lon}])
+      .addTo(map)
+      .bindPopup('Lat: {lat:.4f}, Lon: {lon:.4f}')
+      .openPopup();
+  </script>
+</body>
+</html>
+"""
 
-st_folium(m, width="100%", height=600)
-
-st.markdown(
-    "<small style='color:gray'>Font: Esri World Imagery · Dades de satèl·lit · Sense API key</small>",
-    unsafe_allow_html=True,
-)
+st.components.v1.html(html, height=600)
+st.caption("Font: Esri World Imagery · Leaflet.js · Sense API key")
