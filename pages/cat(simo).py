@@ -10,271 +10,424 @@ from datetime import datetime, timedelta
 import time
 import random
 
+# Configuració de la pàgina
 st.set_page_config(
     page_title="Radar Meteocat - Catalunya",
     page_icon="🌦️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# Títol principal
 st.title("🌦️ Radar Meteorològic de Catalunya")
-st.markdown("Dades del radar del [Meteocat](https://www.meteo.cat/observacions/radar)")
+st.markdown("Dades en temps real del [Servei Meteorològic de Catalunya](https://www.meteo.cat/observacions/radar)")
 
 # Configuració de la graella de tiles
 TILE_CONFIG = {
-    'min_x': 124,
-    'max_x': 133,
-    'min_y': 157,
-    'max_y': 164,
-    'base_params': '6/08/000/000',  # Paràmetres fixos
-    'tile_size': 256
+    'min_x': 124,    # Tile més a l'oest
+    'max_x': 133,    # Tile més a l'est  
+    'min_y': 157,    # Tile més al nord
+    'max_y': 164,    # Tile més al sud
+    'base_params': '6/08/000/000',  # Paràmetres fixos de la URL
+    'tile_size': 256  # Píxels per tile
 }
 
-# Headers per evitar bans
+# Extensió geogràfica real de la imatge combinada
+# Aquests valors s'han de calibrar amb la cobertura real
+GEO_EXTENT = {
+    'lon_min': -0.5,   # Longitud oest
+    'lon_max': 4.5,    # Longitud est
+    'lat_min': 38.5,   # Latitud sud  
+    'lat_max': 44.0    # Latitud nord
+}
+
+# Headers per evitar bloquejos del servidor
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
     'Accept-Language': 'ca,es;q=0.9,en;q=0.8',
     'Referer': 'https://www.meteo.cat/observacions/radar',
     'Origin': 'https://www.meteo.cat',
-    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache'
 }
 
-def download_tile_with_retry(url, max_retries=3):
-    """Descarrega un tile amb reintents i backoff exponencial"""
-    for attempt in range(max_retries):
+# Crear una sessió persistent per millorar el rendiment
+session = requests.Session()
+session.headers.update(HEADERS)
+
+def descarregar_tile(url, max_intents=3):
+    """
+    Descarrega un tile individual amb reintents i backoff exponencial
+    """
+    for intent in range(max_intents):
         try:
-            # Afegir delay aleatori per semblar humà
-            time.sleep(random.uniform(0.1, 0.3))
+            # Delay aleatori per semblar tràfic humà
+            time.sleep(random.uniform(0.05, 0.2))
             
-            response = requests.get(url, headers=HEADERS, timeout=10)
+            response = session.get(url, timeout=15)
             
             if response.status_code == 200:
                 return Image.open(BytesIO(response.content))
-            elif response.status_code == 403:
-                st.warning(f"⚠️ Accés bloquejat (403) - intent {attempt + 1}/{max_retries}")
-                time.sleep(2 ** attempt)  # Backoff exponencial
             elif response.status_code == 404:
-                return None  # Tile no disponible
+                return None  # Tile no existeix
+            elif response.status_code == 403:
+                st.warning(f"⚠️ Accés bloquejat - intent {intent + 1}/{max_intents}")
+                time.sleep(2 ** intent)
             else:
+                st.warning(f"⚠️ Error {response.status_code} - intent {intent + 1}/{max_intents}")
                 time.sleep(1)
                 
+        except requests.exceptions.Timeout:
+            st.warning(f"⏰ Timeout - intent {intent + 1}/{max_intents}")
+            time.sleep(1)
         except Exception as e:
-            st.warning(f"⚠️ Error descarregant tile: {e} - intent {attempt + 1}/{max_retries}")
+            st.warning(f"❌ Error: {str(e)[:50]} - intent {intent + 1}/{max_intents}")
             time.sleep(1)
     
     return None
 
-def download_radar_tiles(date_str, hour, minute):
-    """Descarrega tots els tiles del radar per una data/hora concreta"""
+@st.cache_data(ttl=3600, show_spinner=False)
+def descarregar_radar_sencer(date_str, hour, minute):
+    """
+    Descarrega tots els tiles que formen la imatge completa del radar
+    """
+    tiles_descarregats = {}
+    errors = []
     
-    tiles = {}
     cols = TILE_CONFIG['max_x'] - TILE_CONFIG['min_x'] + 1
     rows = TILE_CONFIG['max_y'] - TILE_CONFIG['min_y'] + 1
-    
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
     total_tiles = cols * rows
-    downloaded = 0
     
-    for y_idx, y in enumerate(range(TILE_CONFIG['min_y'], TILE_CONFIG['max_y'] + 1)):
-        for x_idx, x in enumerate(range(TILE_CONFIG['min_x'], TILE_CONFIG['max_x'] + 1)):
-            url = f"https://static-m.meteo.cat/tiles/combinada/{date_str}/{hour}/{minute}/{TILE_CONFIG['base_params']}/{x}/000/000/{y}.png"
+    progress_bar = st.progress(0, text="Iniciant descàrrega...")
+    contador = 0
+    
+    for y in range(TILE_CONFIG['min_y'], TILE_CONFIG['max_y'] + 1):
+        for x in range(TILE_CONFIG['min_x'], TILE_CONFIG['max_x'] + 1):
+            # Construir URL seguint el patró exacte
+            url = (f"https://static-m.meteo.cat/tiles/combinada/"
+                   f"{date_str}/{hour}/{minute}/"
+                   f"{TILE_CONFIG['base_params']}/"
+                   f"{x}/000/000/{y}.png")
             
-            status_text.text(f"Descarregant tile ({x}, {y})... {downloaded}/{total_tiles}")
+            # Actualitzar progrés
+            contador += 1
+            progress_bar.progress(
+                contador / total_tiles,
+                text=f"Descarregant tile {contador}/{total_tiles} ({x},{y})"
+            )
             
-            tile = download_tile_with_retry(url)
+            # Descarregar tile
+            tile = descarregar_tile(url)
+            
             if tile:
-                tiles[(x, y)] = tile
-                downloaded += 1
-            
-            progress_bar.progress((downloaded) / total_tiles)
-            time.sleep(0.05)  # Petit delay per no saturar el servidor
+                tiles_descarregats[(x, y)] = tile
+            else:
+                errors.append((x, y))
     
-    status_text.text(f"✅ Descarregats {downloaded}/{total_tiles} tiles")
-    return tiles
+    # Informe final
+    if errors:
+        progress_bar.progress(100, text=f"✅ {len(tiles_descarregats)}/{total_tiles} tiles | ⚠️ {len(errors)} errors")
+    else:
+        progress_bar.progress(100, text=f"✅ Tots els tiles descarregats ({total_tiles})")
+    
+    return tiles_descarregats, errors
 
-def create_radar_image(tiles):
-    """Crea una imatge completa a partir dels tiles descarregats"""
-    
+def crear_imatge_completa(tiles):
+    """
+    Combina tots els tiles en una única imatge
+    """
     if not tiles:
         return None
     
     cols = TILE_CONFIG['max_x'] - TILE_CONFIG['min_x'] + 1
     rows = TILE_CONFIG['max_y'] - TILE_CONFIG['min_y'] + 1
     
-    # Crear imatge buida
-    full_img = Image.new('RGBA', (cols * TILE_CONFIG['tile_size'], rows * TILE_CONFIG['tile_size']), (0, 0, 0, 0))
+    # Crear imatge buida amb fons transparent
+    img_completa = Image.new('RGBA', 
+                             (cols * TILE_CONFIG['tile_size'], 
+                              rows * TILE_CONFIG['tile_size']), 
+                             (0, 0, 0, 0))
     
-    # Col·locar cada tile a la seva posició
+    # Col·locar cada tile a la seva posició correcta
     for (x, y), tile in tiles.items():
         col = x - TILE_CONFIG['min_x']
         row = y - TILE_CONFIG['min_y']
-        full_img.paste(tile, (col * TILE_CONFIG['tile_size'], row * TILE_CONFIG['tile_size']))
+        pos_x = col * TILE_CONFIG['tile_size']
+        pos_y = row * TILE_CONFIG['tile_size']
+        img_completa.paste(tile, (pos_x, pos_y))
     
-    return full_img
+    return img_completa
 
-def plot_radar_on_map(radar_image):
-    """Mostra el radar sobre un mapa de Cartopy"""
+def crear_mapa_cartopy(imatge_radar, titol):
+    """
+    Crea un mapa amb Cartopy i superposa el radar
+    """
+    fig = plt.figure(figsize=(14, 10))
+    ax = plt.axes(projection=ccrs.PlateCarree())
     
-    fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={'projection': ccrs.PlateCarree()})
+    # Definir l'àrea geogràfica
+    ax.set_extent([
+        GEO_EXTENT['lon_min'], 
+        GEO_EXTENT['lon_max'],
+        GEO_EXTENT['lat_min'], 
+        GEO_EXTENT['lat_max']
+    ], crs=ccrs.PlateCarree())
     
-    # Configurar mapa
-    ax.set_extent([-0.5, 4.5, 38.5, 44], crs=ccrs.PlateCarree())
-    
-    # Afegir característiques geogràfiques
-    ax.add_feature(cfeature.COASTLINE, linewidth=1)
-    ax.add_feature(cfeature.BORDERS, linewidth=1, linestyle=':')
-    ax.add_feature(cfeature.OCEAN, color='lightblue', alpha=0.3)
-    ax.add_feature(cfeature.LAND, color='lightgray', alpha=0.3)
+    # Afegir elements geogràfics
+    ax.add_feature(cfeature.LAND, facecolor='#2d2d2d', alpha=0.3)
+    ax.add_feature(cfeature.OCEAN, facecolor='#1a1a2e', alpha=0.5)
+    ax.add_feature(cfeature.COASTLINE, linewidth=0.8, edgecolor='white', alpha=0.6)
+    ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor='white', alpha=0.4, linestyle='--')
     
     # Afegir gridlines
-    gl = ax.gridlines(draw_labels=True, alpha=0.3)
+    gl = ax.gridlines(
+        draw_labels=True, 
+        linewidth=0.5, 
+        color='gray', 
+        alpha=0.3, 
+        linestyle='--'
+    )
     gl.top_labels = False
     gl.right_labels = False
+    gl.xlabel_style = {'size': 8, 'color': 'gray'}
+    gl.ylabel_style = {'size': 8, 'color': 'gray'}
     
-    # Sobreposar el radar
-    if radar_image:
-        # Convertir PIL a numpy array
-        radar_array = np.array(radar_image)
+    # Superposar la imatge del radar
+    if imatge_radar:
+        # Convertir a array numpy
+        img_array = np.array(imatge_radar)
         
-        # Extensió geogràfica dels tiles
-        extent = [-0.5, 4.5, 38.5, 44]  # Ajusta segons cobertura real
+        # Extensió geogràfica de la imatge
+        extent = [
+            GEO_EXTENT['lon_min'], 
+            GEO_EXTENT['lon_max'],
+            GEO_EXTENT['lat_min'], 
+            GEO_EXTENT['lat_max']
+        ]
         
-        ax.imshow(radar_array, extent=extent, transform=ccrs.PlateCarree(), alpha=0.7, zorder=10)
+        # Mostrar imatge amb transparència
+        ax.imshow(
+            img_array, 
+            extent=extent, 
+            transform=ccrs.PlateCarree(),
+            alpha=0.75,
+            zorder=10,
+            interpolation='bilinear'
+        )
     
-    ax.set_title('Radar Meteorològic - Meteocat', fontsize=14, fontweight='bold')
+    # Títol i estil
+    ax.set_title(titol, fontsize=14, fontweight='bold', pad=20)
     
+    # Fons fosc
+    fig.patch.set_facecolor('#0e1117')
+    ax.set_facecolor('#0e1117')
+    
+    plt.tight_layout()
     return fig
 
-def get_latest_radar_time():
-    """Obté l'hora actual arrodonida als 6 minuts més propers"""
-    now = datetime.utcnow()
-    minute = (now.minute // 6) * 6
-    return now.replace(minute=minute, second=0, microsecond=0)
+def obtenir_ultima_hora_disponible():
+    """
+    Calcula l'última hora disponible arrodonida als 6 minuts
+    """
+    # El radar s'actualitza cada 6 minuts, amb un retard d'uns 5-10 minuts
+    ara = datetime.utcnow() - timedelta(minutes=8)  # Marge de retard
+    minut_arrodonit = (ara.minute // 6) * 6
+    return ara.replace(minute=minut_arrodonit, second=0, microsecond=0)
 
-# Sidebar amb controls
+# ==================== SIDEBAR ====================
 with st.sidebar:
-    st.header("⚙️ Controls")
+    st.header("🎛️ Controls del Radar")
+    st.divider()
     
-    # Selecció de data i hora
-    latest_time = get_latest_radar_time()
+    # Obtenir última hora disponible
+    ultima_hora = obtenir_ultima_hora_disponible()
+    
+    # Selectors de data i hora
+    st.subheader("📅 Data i Hora")
     
     col1, col2 = st.columns(2)
     with col1:
-        selected_date = st.date_input("Data", latest_time.date())
+        data_seleccionada = st.date_input(
+            "Data",
+            value=ultima_hora.date(),
+            max_value=datetime.utcnow().date()
+        )
+    
     with col2:
-        hours = list(range(24))
-        minutes = list(range(0, 60, 6))
-        selected_hour = st.selectbox("Hora (UTC)", hours, index=latest_time.hour)
-        selected_minute = st.selectbox("Minuts", minutes, index=latest_time.minute // 6)
+        hores_disponibles = list(range(24))
+        hora_seleccionada = st.selectbox(
+            "Hora (UTC)",
+            hores_disponibles,
+            index=ultima_hora.hour
+        )
     
-    # Format date
-    date_str = selected_date.strftime("%Y/%m/%d")
-    hour_str = f"{selected_hour:02d}"
-    minute_str = f"{selected_minute:02d}"
+    minuts_disponibles = list(range(0, 60, 6))
+    minut_seleccionat = st.selectbox(
+        "Minuts",
+        minuts_disponibles,
+        index=ultima_hora.minute // 6
+    )
     
-    st.info(f"📅 Data seleccionada: {date_str} {hour_str}:{minute_str} UTC")
+    # Formatar data i hora
+    data_str = data_seleccionada.strftime("%Y/%m/%d")
+    hora_str = f"{hora_seleccionada:02d}"
+    minut_str = f"{minut_seleccionat:02d}"
     
-    # Botons
-    if st.button("🔄 Carregar Radar", type="primary"):
-        st.session_state.load_radar = True
-        st.session_state.radar_time = (date_str, hour_str, minute_str)
+    # Informació de la selecció
+    st.info(f"📡 **Selecció:** {data_str} {hora_str}:{minut_str} UTC")
     
-    if st.button("🕐 Últim radar disponible"):
-        latest = get_latest_radar_time()
-        date_str = latest.strftime("%Y/%m/%d")
-        hour_str = f"{latest.hour:02d}"
-        minute_str = f"{latest.minute:02d}"
-        st.session_state.load_radar = True
-        st.session_state.radar_time = (date_str, hour_str, minute_str)
+    # Botons d'acció
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        boto_carregar = st.button(
+            "🔄 Carregar",
+            type="primary",
+            use_container_width=True
+        )
+    
+    with col2:
+        boto_ultim = st.button(
+            "🕐 Últim",
+            type="secondary",
+            use_container_width=True
+        )
+    
+    if boto_ultim:
+        # Actualitzar a l'última hora disponible
+        st.session_state.data_radar = ultima_hora.strftime("%Y/%m/%d")
+        st.session_state.hora_radar = f"{ultima_hora.hour:02d}"
+        st.session_state.minut_radar = f"{ultima_hora.minute:02d}"
+        st.session_state.carregar = True
         st.rerun()
     
+    if boto_carregar:
+        st.session_state.data_radar = data_str
+        st.session_state.hora_radar = hora_str
+        st.session_state.minut_radar = minut_str
+        st.session_state.carregar = True
+    
+    # Informació addicional
     st.divider()
-    st.markdown("### ℹ️ Informació")
+    st.subheader("ℹ️ Informació")
     st.markdown("""
-    - Les imatges s'actualitzen cada **6 minuts**
-    - Cobertura: Catalunya, Balears i sud de França
-    - Font: Servei Meteorològic de Catalunya
-    - El radar mostra la **precipitació en temps real**
+    - 🔄 Actualització: **cada 6 minuts**
+    - 🌍 Cobertura: **Catalunya, Balears, Sud França**
+    - 📡 Font: **Servei Meteorològic de Catalunya**
+    - ⏰ Hora: **UTC**
     """)
     
+    # Llegenda de colors
     st.divider()
-    st.markdown("### 🎨 Llegenda")
-    legend_colors = [
-        ("🟢 Verd", "Precipitació fluixa"),
-        ("🟡 Groc", "Precipitació moderada"),
-        ("🟠 Taronja", "Precipitació forta"),
-        ("🔴 Vermell", "Precipitació molt forta"),
-        ("🟣 Lila", "Precipitació torrencial"),
+    st.subheader("🎨 Intensitat de Precipitació")
+    
+    colors_llegenda = [
+        ("🟢", "Molt fluixa"),
+        ("🟡", "Fluixa"),
+        ("🟠", "Moderada"),
+        ("🔴", "Forta"),
+        ("🟣", "Molt forta"),
+        ("⚪", "Granís o calamarsa"),
     ]
-    for color, desc in legend_colors:
-        st.markdown(f"{color} - {desc}")
+    
+    for emoji, descripcio in colors_llegenda:
+        st.markdown(f"{emoji} **{descripcio}**")
+    
+    # Crèdits
+    st.divider()
+    st.markdown(
+        "<small>Desenvolupat amb Streamlit, Cartopy i Matplotlib</small>", 
+        unsafe_allow_html=True
+    )
 
-# Àrea principal
-col1, col2 = st.columns([2, 1])
+# ==================== CONTINGUT PRINCIPAL ====================
 
-with col1:
-    # Carregar i mostrar radar
-    if 'load_radar' in st.session_state and st.session_state.load_radar:
-        date_str, hour_str, minute_str = st.session_state.radar_time
+# Inicialitzar estat de sessió
+if 'carregar' not in st.session_state:
+    st.session_state.carregar = False
+    # Per defecte, carregar l'última hora disponible
+    ultima = obtenir_ultima_hora_disponible()
+    st.session_state.data_radar = ultima.strftime("%Y/%m/%d")
+    st.session_state.hora_radar = f"{ultima.hour:02d}"
+    st.session_state.minut_radar = f"{ultima.minute:02d}"
+    st.session_state.carregar = True
+
+# Carregar i mostrar radar
+if st.session_state.carregar:
+    data = st.session_state.data_radar
+    hora = st.session_state.hora_radar
+    minut = st.session_state.minut_radar
+    
+    st.markdown(f"### 📡 Radar del {data} a les {hora}:{minut} UTC")
+    
+    # Descarregar tiles
+    with st.spinner(f"⏳ Descarregant dades del radar..."):
+        tiles, errors = descarregar_radar_sencer(data, hora, minut)
+    
+    if tiles:
+        # Crear imatge completa
+        with st.spinner("🎨 Processant imatge..."):
+            imatge_radar = crear_imatge_completa(tiles)
         
-        with st.spinner(f"Descarregant radar del {date_str} a les {hour_str}:{minute_str} UTC..."):
-            tiles = download_radar_tiles(date_str, hour_str, minute_str)
+        if imatge_radar:
+            # Crear pestanyes per diferents visualitzacions
+            tab1, tab2 = st.tabs(["🗺️ Mapa amb Cartopy", "📸 Imatge Directa"])
             
-            if tiles:
-                radar_img = create_radar_image(tiles)
-                
-                if radar_img:
-                    st.success(f"✅ Radar carregat correctament ({len(tiles)} tiles)")
-                    
-                    # Mostrar amb Cartopy
-                    fig = plot_radar_on_map(radar_img)
-                    st.pyplot(fig)
-                    
-                    # També mostrar imatge crua
-                    with st.expander("Veure imatge crua del radar"):
-                        st.image(radar_img, caption=f"Radar {date_str} {hour_str}:{minute_str} UTC", use_column_width=True)
-                else:
-                    st.error("❌ No s'ha pogut crear la imatge del radar")
-            else:
-                st.error("❌ No s'han pogut descarregar els tiles del radar")
-                st.info("💡 Prova amb una hora més recent o comprova la connexió")
-        
-        st.session_state.load_radar = False
+            with tab1:
+                # Mostrar mapa amb Cartopy
+                titol = f"Radar Meteorològic - {data} {hora}:{minut} UTC"
+                fig = crear_mapa_cartopy(imatge_radar, titol)
+                st.pyplot(fig)
+            
+            with tab2:
+                # Mostrar imatge crua
+                st.image(
+                    imatge_radar, 
+                    caption=f"Imatge del radar - {data} {hora}:{minut} UTC",
+                    use_column_width=True
+                )
+            
+            # Estadístiques
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Tiles descarregats", f"{len(tiles)}")
+            with col2:
+                mida_mb = imatge_radar.size[0] * imatge_radar.size[1] * 4 / (1024 * 1024)
+                st.metric("Resolució", f"{imatge_radar.size[0]}x{imatge_radar.size[1]}")
+            with col3:
+                st.metric("Errors", f"{len(errors)}")
+            
+            # Botó per descarregar la imatge
+            buf = BytesIO()
+            imatge_radar.save(buf, format='PNG')
+            st.download_button(
+                label="💾 Descarregar Imatge PNG",
+                data=buf.getvalue(),
+                file_name=f"radar_mtc_{data.replace('/', '')}_{hora}{minut}.png",
+                mime="image/png",
+                use_container_width=True
+            )
+        else:
+            st.error("❌ No s'ha pogut crear la imatge del radar")
     else:
-        st.info("👈 Selecciona una data i hora al panel lateral i fes clic a 'Carregar Radar'")
-        
-        # Mostrar mapa buit de Catalunya
-        fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={'projection': ccrs.PlateCarree()})
-        ax.set_extent([-0.5, 4.5, 38.5, 44], crs=ccrs.PlateCarree())
-        ax.add_feature(cfeature.COASTLINE, linewidth=1)
-        ax.add_feature(cfeature.BORDERS, linewidth=1, linestyle=':')
-        ax.add_feature(cfeature.OCEAN, color='lightblue', alpha=0.3)
-        ax.add_feature(cfeature.LAND, color='lightgray', alpha=0.3)
-        gl = ax.gridlines(draw_labels=True, alpha=0.3)
-        gl.top_labels = False
-        gl.right_labels = False
-        ax.set_title('Mapa de Catalunya - Esperant dades del radar...', fontsize=14)
-        st.pyplot(fig)
-
-with col2:
-    st.subheader("📊 Estadístiques")
+        st.error(f"❌ No s'han pogut descarregar els tiles del radar")
+        st.info("💡 Consells:\n"
+                "- Comprova que la data i hora siguin correctes\n"
+                "- El radar pot no estar disponible per dates futures\n"
+                "- Prova amb l'opció 'Últim' per veure el radar més recent")
     
-    if 'radar_time' in st.session_state:
-        date_str, hour_str, minute_str = st.session_state.radar_time
-        st.metric("Data", f"{date_str}")
-        st.metric("Hora UTC", f"{hour_str}:{minute_str}")
-    
-    st.metric("Tiles horitzontals", TILE_CONFIG['max_x'] - TILE_CONFIG['min_x'] + 1)
-    st.metric("Tiles verticals", TILE_CONFIG['max_y'] - TILE_CONFIG['min_y'] + 1)
-    st.metric("Total tiles", (TILE_CONFIG['max_x'] - TILE_CONFIG['min_x'] + 1) * (TILE_CONFIG['max_y'] - TILE_CONFIG['min_y'] + 1))
+    # Reset
+    st.session_state.carregar = False
 
-# Auto-refresh
-if st.checkbox("🔄 Auto-actualitzar cada 6 minuts"):
-    st.markdown("L'app s'actualitzarà automàticament...")
-    time.sleep(360)  # 6 minuts
-    st.rerun()
-
-st.markdown("---")
-st.markdown("📡 Dades del [Servei Meteorològic de Catalunya](https://www.meteo.cat) | Desenvolupat amb Streamlit i Cartopy")
+# Peu de pàgina
+st.divider()
+st.markdown(
+    "<p style='text-align: center; color: gray;'>"
+    "📡 Dades del <a href='https://www.meteo.cat/observacions/radar' style='color: #ff6b35;'>"
+    "Servei Meteorològic de Catalunya</a> | "
+    "Desenvolupat amb ❤️ i Python"
+    "</p>", 
+    unsafe_allow_html=True
+)
