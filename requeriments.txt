@@ -7,9 +7,9 @@ numpy>=1.24.0
 matplotlib>=3.7.0
 eccodes>=1.6.0
 
-streamlit
-requests
-pillow
-numpy
-matplotlib
-cartopy
+streamlit>=1.28.0
+requests>=2.31.0
+pillow>=10.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+cartopy>=0.22.0
