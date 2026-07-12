@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACT — Associació de Caçadors de Tempestes</title>
+<link rel="icon" type="image/x-icon" href="fotos/web.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --blanc: #FFFFFF;
+    --gebre: #F5F7FA;
+    --linia: #DDE3EA;
+    --tinta: #10151C;
+    --tinta-baixa: #6B7480;
+    --llamp: #E0A400;
+    --radar: #2F6FA8;
+    --alerta: #C4432A;
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-cos: 'Inter', sans-serif;
+    --font-dades: 'JetBrains Mono', monospace;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html{ scroll-behavior:smooth; }
+
+  body{
+    background:var(--blanc);
+    color:var(--tinta);
+    font-family:var(--font-cos);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
+
+  a{ color:inherit; text-decoration:none; }
+  img{ max-width:100%; display:block; }
+
+  ::selection{ background:var(--llamp); color:var(--blanc); }
+
+  :focus-visible{
+    outline:2px solid var(--llamp);
+    outline-offset:3px;
+    border-radius:1px;
+  }
+
+  .contenidor{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 32px;
+  }
+
+  /* ============ CAPÇALERA ============ */
+
+  header{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:100;
+    background:rgba(255,255,255,0.9);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--linia);
+  }
+
+  .barra-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 32px;
+    max-width:1180px;
+    margin:0 auto;
+  }
+
+  .marca{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+
+  .marca img{
+    height:40px;
+    width:auto;
+  }
+
+  .marca-text{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:0.85rem;
+    letter-spacing:0.02em;
+    line-height:1.4;
+  }
+
+  .marca-text span{
+    display:block;
+    font-family:var(--font-cos);
+    font-weight:500;
+    font-size:0.6rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--tinta-baixa);
+    margin-top:4px;
+  }
+
+  nav ul{
+    display:flex;
+    gap:36px;
+    list-style:none;
+  }
+
+  nav a{
+    font-size:0.92rem;
+    font-weight:500;
+    color:var(--tinta-baixa);
+    transition:color 0.2s;
+  }
+
+  nav a:hover{ color:var(--tinta); }
+
+  .btn-nav{
+    background:var(--tinta);
+    color:var(--blanc) !important;
+    padding:10px 20px;
+    font-weight:600;
+    font-size:0.85rem;
+    border:1px solid var(--tinta);
+    transition:background 0.15s, color 0.15s;
+  }
+
+  .btn-nav:hover{ background:var(--blanc); color:var(--tinta) !important; }
+
+  .menu-mobil{
+    display:none;
+    background:none;
+    border:none;
+    color:var(--tinta);
+    font-size:1.6rem;
+    cursor:pointer;
+  }
+
+  /* ============ HERO ============ */
+
+  .hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    padding-top:90px;
+  }
+
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1.05fr 0.95fr;
+    gap:70px;
+    align-items:center;
+    width:100%;
+  }
+
+  .etiqueta-viu{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-family:var(--font-dades);
+    font-size:0.72rem;
+    letter-spacing:0.04em;
+    color:var(--radar);
+    border:1px solid var(--linia);
+    background:var(--gebre);
+    padding:7px 12px;
+    margin-bottom:32px;
+  }
+
+  .punt-viu{
+    width:6px; height:6px;
+    background:var(--radar);
+    border-radius:50%;
+    animation:pols 2s ease-in-out infinite;
+  }
+
+  @keyframes pols{
+    0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(47,111,168,0.4); }
+    50%{ opacity:0.5; box-shadow:0 0 0 6px rgba(47,111,168,0); }
+  }
+
+  .hero h1{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:clamp(1.5rem, 3.2vw, 2.6rem);
+    line-height:1.55;
+    letter-spacing:0.01em;
+    margin-bottom:28px;
+  }
+
+  .hero h1 .accent{
+    color:var(--llamp);
+  }
+
+  .hero p.intro{
+    font-size:1.1rem;
+    color:var(--tinta-baixa);
+    max-width:520px;
+    margin-bottom:38px;
+  }
+
+  .hero-cta{
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .btn-principal{
+    background:var(--tinta);
+    color:var(--blanc);
+    padding:16px 30px;
+    font-weight:600;
+    font-size:0.95rem;
+    border:1px solid var(--tinta);
+    transition:transform 0.15s, background 0.15s, color 0.15s;
+    display:inline-block;
+  }
+
+  .btn-principal:hover{
+    background:var(--blanc);
+    color:var(--tinta);
+    transform:translateY(-2px);
+  }
+
+  .btn-secundari{
+    border:1px solid var(--linia);
+    color:var(--tinta);
+    padding:16px 30px;
+    font-weight:600;
+    font-size:0.95rem;
+    transition:border-color 0.15s, background 0.15s;
+  }
+
+  .btn-secundari:hover{
+    border-color:var(--tinta);
+    background:var(--gebre);
+  }
+
+  /* --- logo real com a element hero --- */
+  .hero-logo{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    aspect-ratio:1/1;
+    max-width:420px;
+    margin:0 auto;
+    border:1px solid var(--linia);
+    background:
+      linear-gradient(var(--linia) 1px, transparent 1px),
+      linear-gradient(90deg, var(--linia) 1px, transparent 1px);
+    background-size:24px 24px;
+  }
+
+  .hero-logo img{
+    width:62%;
+    height:auto;
+    filter:drop-shadow(0 12px 24px rgba(16,21,28,0.08));
+  }
+
+  .hero-logo .etiqueta-cantonada{
+    position:absolute;
+    bottom:14px;
+    left:14px;
+    font-family:var(--font-dades);
+    font-size:0.62rem;
+    color:var(--tinta-baixa);
+    letter-spacing:0.02em;
+  }
+
+  /* ============ FRANJA DE DADES ============ */
+
+  .franja-dades{
+    border-top:1px solid var(--linia);
+    border-bottom:1px solid var(--linia);
+    background:var(--gebre);
+  }
+
+  .fila-dades{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .dada{
+    padding:32px 28px;
+    border-right:1px solid var(--linia);
+  }
+
+  .dada:last-child{ border-right:none; }
+
+  .dada .num{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:1.5rem;
+    color:var(--llamp);
+    line-height:1.3;
+  }
+
+  .dada .etq{
+    font-size:0.82rem;
+    color:var(--tinta-baixa);
+    margin-top:10px;
+  }
+
+  /* ============ SECCIONS ============ */
+
+  section{
+    padding:110px 0;
+  }
+
+  .cap-seccio{
+    max-width:640px;
+    margin-bottom:64px;
+  }
+
+  .cap-seccio .eyebrow{
+    font-family:var(--font-dades);
+    font-size:0.75rem;
+    color:var(--radar);
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    margin-bottom:16px;
+    display:block;
+  }
+
+  .cap-seccio h2{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:clamp(1.15rem, 2vw, 1.6rem);
+    line-height:1.6;
+    margin-bottom:20px;
+  }
+
+  .cap-seccio p{
+    color:var(--tinta-baixa);
+    font-size:1.05rem;
+  }
+
+  /* --- Missió --- */
+
+  .graella-missio{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--linia);
+    border:1px solid var(--linia);
+  }
+
+  .targeta-missio{
+    background:var(--blanc);
+    padding:38px 32px;
+    transition:background 0.2s;
+  }
+
+  .targeta-missio:hover{
+    background:var(--gebre);
+  }
+
+  .targeta-missio .icona{
+    width:38px; height:38px;
+    margin-bottom:24px;
+    color:var(--llamp);
+  }
+
+  .targeta-missio h3{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:0.8rem;
+    line-height:1.6;
+    margin-bottom:14px;
+  }
+
+  .targeta-missio p{
+    color:var(--tinta-baixa);
+    font-size:0.95rem;
+  }
+
+  /* --- Fenòmens que seguim --- */
+
+  .fenomens{
+    background:var(--gebre);
+    border-top:1px solid var(--linia);
+    border-bottom:1px solid var(--linia);
+  }
+
+  .llista-fenomens{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .fenomen{
+    display:grid;
+    grid-template-columns:110px 1fr 200px;
+    align-items:center;
+    gap:24px;
+    padding:28px 0;
+    border-bottom:1px solid var(--linia);
+    transition:padding-left 0.25s;
+  }
+
+  .fenomen:hover{
+    padding-left:12px;
+  }
+
+  .fenomen:last-child{ border-bottom:none; }
+
+  .fenomen .codi{
+    font-family:var(--font-dades);
+    color:var(--tinta-baixa);
+    font-size:0.8rem;
+  }
+
+  .fenomen h4{
+    font-family:var(--font-cos);
+    font-weight:700;
+    font-size:1.25rem;
+    margin-bottom:5px;
+  }
+
+  .fenomen p{
+    color:var(--tinta-baixa);
+    font-size:0.9rem;
+  }
+
+  .fenomen .risc{
+    justify-self:end;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-dades);
+    font-size:0.68rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+  }
+
+  .barra-risc{
+    display:flex;
+    gap:3px;
+  }
+
+  .barra-risc span{
+    width:5px;
+    height:16px;
+    background:var(--linia);
+  }
+
+  .barra-risc span.actiu{ background:var(--alerta); }
+  .barra-risc span.actiu.mitjana{ background:var(--llamp); }
+
+  /* --- Com participar --- */
+
+  .participar .graella-passos{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:24px;
+  }
+
+  .pas{
+    position:relative;
+    padding-top:22px;
+  }
+
+  .pas::before{
+    content:'';
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:2px;
+    background:var(--linia);
+  }
+
+  .pas.actual::before{
+    background:var(--llamp);
+  }
+
+  .pas .marca-pas{
+    font-family:var(--font-dades);
+    font-size:0.7rem;
+    color:var(--llamp);
+    margin-bottom:16px;
+    display:block;
+  }
+
+  .pas h4{
+    font-family:var(--font-cos);
+    font-weight:700;
+    font-size:1.1rem;
+    margin-bottom:10px;
+  }
+
+  .pas p{
+    color:var(--tinta-baixa);
+    font-size:0.9rem;
+  }
+
+  /* --- Comunitat / testimoni --- */
+
+  .comunitat{
+    background:var(--blanc);
+    border-top:1px solid var(--linia);
+    border-bottom:1px solid var(--linia);
+  }
+
+  .bloc-comunitat{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:70px;
+    align-items:center;
+  }
+
+  .cita{
+    font-size:1.5rem;
+    line-height:1.5;
+    margin-bottom:26px;
+    font-weight:500;
+  }
+
+  .cita span{ color:var(--llamp); font-weight:700; }
+
+  .autor-cita{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+
+  .avatar-inicial{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:var(--gebre);
+    border:1px solid var(--linia);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--font-pixel);
+    font-size:0.75rem;
+    color:var(--llamp);
+  }
+
+  .autor-cita .nom{ font-weight:600; font-size:0.95rem; }
+  .autor-cita .rol{ font-size:0.82rem; color:var(--tinta-baixa); }
+
+  .mapa-comarques svg{ width:100%; height:auto; }
+
+  .punt-comarca{
+    animation:pols 2.4s ease-in-out infinite;
+  }
+
+  .etiqueta-dada{
+    font-family:var(--font-dades);
+    font-size:0.68rem;
+    fill:var(--tinta-baixa);
+    letter-spacing:0.02em;
+  }
+
+  /* --- Unir-se / CTA final --- */
+
+  .cta-final{
+    text-align:center;
+  }
+
+  .cta-final .contenidor{
+    max-width:720px;
+  }
+
+  .cta-final h2{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:clamp(1.2rem, 2.4vw, 1.9rem);
+    line-height:1.7;
+    margin-bottom:24px;
+  }
+
+  .cta-final p{
+    color:var(--tinta-baixa);
+    font-size:1.1rem;
+    margin-bottom:40px;
+    max-width:520px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  .form-unir{
+    display:flex;
+    gap:12px;
+    max-width:440px;
+    margin:0 auto;
+  }
+
+  .form-unir input{
+    flex:1;
+    background:var(--blanc);
+    border:1px solid var(--linia);
+    color:var(--tinta);
+    padding:16px 18px;
+    font-family:var(--font-cos);
+    font-size:0.95rem;
+  }
+
+  .form-unir input::placeholder{ color:var(--tinta-baixa); }
+
+  .form-unir input:focus{
+    outline:none;
+    border-color:var(--radar);
+  }
+
+  .nota-form{
+    font-size:0.8rem;
+    color:var(--tinta-baixa);
+    margin-top:18px;
+  }
+
+  /* ============ PEU ============ */
+
+  footer{
+    border-top:1px solid var(--linia);
+    padding:56px 0 32px;
+  }
+
+  .graella-peu{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr 1fr;
+    gap:40px;
+    margin-bottom:48px;
+  }
+
+  .peu-marca{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:18px;
+  }
+
+  .peu-marca img{ height:32px; }
+
+  .peu-marca span{
+    font-family:var(--font-pixel);
+    font-weight:400;
+    font-size:0.85rem;
+  }
+
+  .graella-peu p{
+    color:var(--tinta-baixa);
+    font-size:0.88rem;
+    max-width:280px;
+  }
+
+  .col-peu h5{
+    font-size:0.75rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--tinta-baixa);
+    margin-bottom:18px;
+  }
+
+  .col-peu ul{ list-style:none; }
+
+  .col-peu li{ margin-bottom:11px; }
+
+  .col-peu a{
+    color:var(--tinta);
+    font-size:0.9rem;
+    opacity:0.75;
+    transition:opacity 0.2s, color 0.2s;
+  }
+
+  .col-peu a:hover{ opacity:1; color:var(--llamp); }
+
+  .peu-baix{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-top:28px;
+    border-top:1px solid var(--linia);
+    font-size:0.8rem;
+    color:var(--tinta-baixa);
+  }
+
+  /* ============ RESPONSIU ============ */
+
+  @media (max-width:900px){
+    .hero-grid{ grid-template-columns:1fr; gap:44px; }
+    .hero-logo{ max-width:320px; order:-1; }
+    .fila-dades{ grid-template-columns:repeat(2,1fr); }
+    .dada:nth-child(2){ border-right:none; }
+    .dada{ border-bottom:1px solid var(--linia); }
+    .graella-missio{ grid-template-columns:1fr; }
+    .fenomen{ grid-template-columns:1fr; gap:8px; text-align:left; }
+    .fenomen .risc{ justify-self:start; }
+    .participar .graella-passos{ grid-template-columns:1fr 1fr; row-gap:36px; }
+    .bloc-comunitat{ grid-template-columns:1fr; gap:44px; }
+    .graella-peu{ grid-template-columns:1fr 1fr; }
+    nav ul{ display:none; }
+    .menu-mobil{ display:block; }
+  }
+
+  @media (max-width:560px){
+    .contenidor{ padding:0 20px; }
+    .participar .graella-passos{ grid-template-columns:1fr; }
+    .form-unir{ flex-direction:column; }
+    .graella-peu{ grid-template-columns:1fr; }
+    .peu-baix{ flex-direction:column; gap:10px; text-align:center; }
+  }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="barra-nav">
+    <div class="marca">
+      <img src="fotos/indexlogo.png" alt="Logo ACT">
+      <div class="marca-text">ACT<span>Caçadors de Tempestes</span></div>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#missio">Qui som</a></li>
+        <li><a href="#fenomens">Fenòmens</a></li>
+        <li><a href="#participar">Participar</a></li>
+        <li><a href="#comunitat">Comunitat</a></li>
+      </ul>
+    </nav>
+    <a href="#unir" class="btn-nav">Fes-te'n soci</a>
+    <button class="menu-mobil" aria-label="Obrir menú">☰</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="contenidor hero-grid">
+    <div>
+      <div class="etiqueta-viu">
+        <span class="punt-viu"></span>
+        VIGILÀNCIA ACTIVA · CATALUNYA
+      </div>
+      <h1>Sortim quan<br><span class="accent">el cel s'obre.</span></h1>
+      <p class="intro">L'Associació de Caçadors de Tempestes reuneix persones apassionades per la meteorologia severa arreu de Catalunya: neu, calamarsa, vent i llamps. Observem, documentem i aprenem junts.</p>
+      <div class="hero-cta">
+        <a href="#unir" class="btn-principal">Uneix-te a l'ACT</a>
+        <a href="#missio" class="btn-secundari">Descobreix qui som</a>
+      </div>
+    </div>
+
+    <div class="hero-logo">
+      <img src="fotos/indexlogo.png" alt="Logo de l'Associació de Caçadors de Tempestes">
+      <span class="etiqueta-cantonada">// ACT</span>
+    </div>
+  </div>
+</section>
+
+<div class="franja-dades">
+  <div class="contenidor">
+    <div class="fila-dades">
+      <div class="dada">
+        <div class="num">42</div>
+        <div class="etq">comarques amb observadors actius</div>
+      </div>
+      <div class="dada">
+        <div class="num">180+</div>
+        <div class="etq">socis registrats</div>
+      </div>
+      <div class="dada">
+        <div class="num">24/7</div>
+        <div class="etq">seguiment de radar i satèl·lit</div>
+      </div>
+      <div class="dada">
+        <div class="num">6</div>
+        <div class="etq">tallers de formació anuals</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="missio" id="missio">
+  <div class="contenidor">
+    <div class="cap-seccio">
+      <span class="eyebrow">Qui som</span>
+      <h2>No perseguim l'espectacle,<br>perseguim entendre-ho</h2>
+      <p>Som una associació sense ànim de lucre formada per persones de tot Catalunya que comparteixen una mateixa curiositat: com es forma i es comporta el temps sever. Des de nevades intenses al Pirineu fins a tempestes elèctriques al litoral, documentem el que passa i ho expliquem amb rigor.</p>
+    </div>
+
+    <div class="graella-missio">
+      <div class="targeta-missio">
+        <svg class="icona" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M5.6 5.6l2.8 2.8M3 12h4M5.6 18.4l2.8-2.8M12 21v-4M18.4 18.4l-2.8-2.8M21 12h-4M18.4 5.6l-2.8 2.8"/><circle cx="12" cy="12" r="3.2"/></svg>
+        <h3>Observació<br>de camp</h3>
+        <p>Sortides organitzades per seguir sistemes de tempesta amb seguretat, sempre guiades per persones amb experiència en meteorologia severa.</p>
+      </div>
+      <div class="targeta-missio">
+        <svg class="icona" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19h16M4 19l4-9 4 5 3-7 5 11"/></svg>
+        <h3>Registre<br>i dades</h3>
+        <p>Cada soci pot aportar observacions locals: pressió, calamarsa, acumulació de neu. Aquestes dades alimenten el nostre arxiu obert de la comunitat.</p>
+      </div>
+      <div class="targeta-missio">
+        <svg class="icona" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v6c0 5 4 8.5 9 9 5-.5 9-4 9-9V7l-9-5Z"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3>Formació<br>i seguretat</h3>
+        <p>Tallers periòdics sobre lectura de radar, interpretació de núvols i protocols de seguretat davant de fenòmens extrems.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="fenomens" id="fenomens">
+  <div class="contenidor">
+    <div class="cap-seccio">
+      <span class="eyebrow">El que seguim</span>
+      <h2>Meteorologia severa,<br>de la neu al llamp</h2>
+      <p>Catalunya té una diversitat climàtica poc habitual: en un mateix hivern es pot nevar al Pirineu i tronar a la costa. Aquí concentrem el nostre seguiment.</p>
+    </div>
+
+    <div class="llista-fenomens">
+      <div class="fenomen">
+        <span class="codi">01 — NEU</span>
+        <div>
+          <h4>Nevades i tempestes de neu</h4>
+          <p>Seguiment d'episodis de neu al Pirineu, Prepirineu i, quan les condicions ho permeten, a cotes baixes.</p>
+        </div>
+        <div class="risc">
+          <div class="barra-risc"><span class="actiu mitjana"></span><span class="actiu mitjana"></span><span></span><span></span></div>
+          risc moderat
+        </div>
+      </div>
+      <div class="fenomen">
+        <span class="codi">02 — CALAMARSA</span>
+        <div>
+          <h4>Calamarsades i pedra grossa</h4>
+          <p>Sistemes convectius que produeixen calamarsa, especialment freqüents a l'estiu a l'interior del país.</p>
+        </div>
+        <div class="risc">
+          <div class="barra-risc"><span class="actiu"></span><span class="actiu"></span><span class="actiu"></span><span></span></div>
+          risc alt
+        </div>
+      </div>
+      <div class="fenomen">
+        <span class="codi">03 — ELÈCTRIC</span>
+        <div>
+          <h4>Tempestes elèctriques</h4>
+          <p>Activitat de llamps associada a fronts i tempestes d'estiu, amb especial atenció a zones de muntanya i litoral.</p>
+        </div>
+        <div class="risc">
+          <div class="barra-risc"><span class="actiu"></span><span class="actiu"></span><span class="actiu"></span><span class="actiu"></span></div>
+          risc molt alt
+        </div>
+      </div>
+      <div class="fenomen">
+        <span class="codi">04 — VENT</span>
+        <div>
+          <h4>Vent fort i ratxes destructives</h4>
+          <p>Episodis de vent associats a tempestes o fronts, incloent-hi possibles fenòmens de mesoescala.</p>
+        </div>
+        <div class="risc">
+          <div class="barra-risc"><span class="actiu mitjana"></span><span class="actiu mitjana"></span><span></span><span></span></div>
+          risc moderat
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="participar" id="participar">
+  <div class="contenidor">
+    <div class="cap-seccio">
+      <span class="eyebrow">Com funciona</span>
+      <h2>Fer-se'n soci,<br>pas a pas</h2>
+      <p>Formar part de l'ACT és senzill i està obert a qualsevol persona interessada en la meteorologia, tingui o no experiència prèvia.</p>
+    </div>
+
+    <div class="graella-passos">
+      <div class="pas actual">
+        <span class="marca-pas">PAS 1</span>
+        <h4>Omple el formulari</h4>
+        <p>Digue'ns d'on ets i quin interès tens en la meteorologia severa.</p>
+      </div>
+      <div class="pas">
+        <span class="marca-pas">PAS 2</span>
+        <h4>Sessió d'acollida</h4>
+        <p>Et convidem a una xerrada introductòria amb l'equip de formació.</p>
+      </div>
+      <div class="pas">
+        <span class="marca-pas">PAS 3</span>
+        <h4>Taller de seguretat</h4>
+        <p>Aprens els protocols bàsics abans de sortir a camp per primer cop.</p>
+      </div>
+      <div class="pas">
+        <span class="marca-pas">PAS 4</span>
+        <h4>Surt amb el grup</h4>
+        <p>T'incorpores a les sortides d'observació de la teva zona.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="comunitat" id="comunitat">
+  <div class="contenidor">
+    <div class="bloc-comunitat">
+      <div>
+        <p class="cita">«Vaig entrar a l'ACT sense saber res de núvols. Ara sé llegir un <span>radar de precipitació</span> abans que arribi la pluja al poble.»</p>
+        <div class="autor-cita">
+          <div class="avatar-inicial">M</div>
+          <div>
+            <div class="nom">Marta Solà</div>
+            <div class="rol">Sòcia, Osona — 2 anys a l'ACT</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mapa-comarques">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+          <path d="M60 220 L90 160 L140 140 L180 100 L230 90 L280 110 L320 90 L360 130 L340 190 L300 230 L240 250 L180 240 L120 250 L60 220Z" fill="none" stroke="#DDE3EA" stroke-width="1.5"/>
+          <circle class="punt-comarca" cx="110" cy="170" r="4" fill="#E0A400"/>
+          <circle class="punt-comarca" cx="200" cy="130" r="4" fill="#2F6FA8" style="animation-delay:0.4s"/>
+          <circle class="punt-comarca" cx="270" cy="150" r="4" fill="#E0A400" style="animation-delay:0.8s"/>
+          <circle class="punt-comarca" cx="180" cy="200" r="4" fill="#2F6FA8" style="animation-delay:1.2s"/>
+          <circle class="punt-comarca" cx="310" cy="180" r="4" fill="#E0A400" style="animation-delay:0.6s"/>
+          <circle class="punt-comarca" cx="140" cy="230" r="4" fill="#2F6FA8" style="animation-delay:1s"/>
+          <text x="200" y="285" text-anchor="middle" class="etiqueta-dada">observadors actius per comarca</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final" id="unir">
+  <div class="contenidor">
+    <h2>La propera tempesta<br>ja s'està formant</h2>
+    <p>Deixa'ns el teu correu i t'enviarem els propers passos per unir-te a l'ACT, sense compromís.</p>
+    <form class="form-unir" onsubmit="return false;">
+      <input type="email" placeholder="el-teu-correu@exemple.cat" required aria-label="Correu electrònic">
+      <button type="submit" class="btn-principal" style="border:1px solid var(--tinta); cursor:pointer;">Envia'm informació</button>
+    </form>
+    <p class="nota-form">Sense spam. Un correu de benvinguda i prou, fins que decideixis fer el pas.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="contenidor">
+    <div class="graella-peu">
+      <div>
+        <div class="peu-marca">
+          <img src="fotos/indexlogo.png" alt="Logo ACT">
+          <span>ACT</span>
+        </div>
+        <p>Associació de Caçadors de Tempestes. Una comunitat catalana per entendre, seguir i respectar la meteorologia severa.</p>
+      </div>
+      <div class="col-peu">
+        <h5>Associació</h5>
+        <ul>
+          <li><a href="#missio">Qui som</a></li>
+          <li><a href="#fenomens">Fenòmens</a></li>
+          <li><a href="#comunitat">Comunitat</a></li>
+        </ul>
+      </div>
+      <div class="col-peu">
+        <h5>Participar</h5>
+        <ul>
+          <li><a href="#participar">Fes-te'n soci</a></li>
+          <li><a href="#participar">Tallers</a></li>
+          <li><a href="#unir">Contacte</a></li>
+        </ul>
+      </div>
+      <div class="col-peu">
+        <h5>Segueix-nos</h5>
+        <ul>
+          <li><a href="#">Instagram</a></li>
+          <li><a href="#">Telegram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="peu-baix">
+      <span>© 2026 ACT — Associació de Caçadors de Tempestes</span>
+      <span>Fet a Catalunya, per a Catalunya</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
